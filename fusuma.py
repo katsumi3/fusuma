@@ -1,8 +1,7 @@
-import bpy, bmesh, bpy.ops
+import bpy, bmesh, bpy.ops, time
 from math import pi, radians, degrees, sqrt, cos, acos, tan, sin, atan
 from mathutils import Vector, Matrix, Euler
 from bpy.props import FloatProperty, EnumProperty, BoolProperty, IntProperty
-
 bl_info = {
     "name": "襖を付けるアドオン",
     "author": "勝己（kastumi）",
@@ -211,7 +210,7 @@ def norm_move(obj, z_c):
 
 def uv_rot(loop_no, plane):
     #UVテクスチャをz_min_noを下にして並べる
-    plane = bpy.context.object
+    #print("loop_no=", loop_no)
     msh = plane.data
     p_mat = plane.matrix_world.copy()
     norm = msh.polygons[0].normal
@@ -264,98 +263,101 @@ def uv_rot(loop_no, plane):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def set_hikide(w, z_min_no, inv_vh, yz_move, end_objs, mai, plane, plane_t):
+def set_hikide(w, z_min_no, inv_vh, yz_move, end_objs, mai, plane, plane_t,
+               v_width, co):
     #襖の引き手を付ける
     #wは1から始まるので注意
+    p_len = len(plane.data.vertices)
+
     if w % 2 == 1:
         #辺0が短いとき　z_min_no%2==0　になる
         #inv_vh は反転しない時が1、反転する時が0
-        #yz_move == "y"はTrueの時が1
+
         if z_min_no % 2 == 0 and inv_vh == 1 and yz_move == "y":
-            wood = end_objs[-round(mai / 4)]
+            obj_no = (z_min_no + round(p_len / 4)) % p_len
+            wood = end_objs[-obj_no]
             l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 0 and inv_vh == 1 and yz_move == "z":
-            wood = end_objs[-(len(plane.data.vertices)) + round(mai / 4)]
-            l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
+            obj_no = (z_min_no + round(p_len / 4)) % p_len
+            wood = end_objs[-(p_len) + obj_no]
+            l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
 
         elif z_min_no % 2 == 0 and inv_vh == 0 and yz_move == "y":
-            wood = end_objs[-(len(plane.data.vertices))]
+            obj_no = z_min_no
+            wood = end_objs[-p_len + z_min_no]
             l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 0 and inv_vh == 0 and yz_move == "z":
-            wood = end_objs[-(len(plane.data.vertices))]
+            obj_no = z_min_no
+            wood = end_objs[-p_len + obj_no]
             l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 1 and inv_vh == 1 and yz_move == "y":
-            wood = end_objs[-(len(plane.data.vertices))]
+            obj_no = z_min_no - round(p_len / 4)
+            wood = end_objs[-p_len + obj_no]
             l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 1 and inv_vh == 1 and yz_move == "z":
-            wood = end_objs[-(len(plane.data.vertices))]
+            obj_no = z_min_no - round(p_len / 4)
+            wood = end_objs[-p_len + obj_no]
             l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 1 and inv_vh == 0 and yz_move == "y":
-            wood = end_objs[-(len(plane.data.vertices)) + round(mai / 4)]
+            obj_no = z_min_no
+            wood = end_objs[-p_len + z_min_no]
             l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 1 and inv_vh == 0 and yz_move == "z":
-            wood = end_objs[-(len(plane.data.vertices)) + round(mai / 4)]
+            obj_no = z_min_no
+            wood = end_objs[-p_len + obj_no]
             l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
     elif w % 2 == 0:
         #辺0が短いとき　z_min_no%2==0　になる
         #inv_vh は反転しない時が1、反転する時が0
         #yz_move == "y"はTrueの時が1
         if z_min_no % 2 == 0 and inv_vh == 1 and yz_move == "y":
-            wood = end_objs[-(len(plane.data.vertices)) + round(mai / 4)]
+            obj_no = (z_min_no + round(p_len / 4)) % p_len
+            wood = end_objs[-p_len + obj_no]
             l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 0 and inv_vh == 1 and yz_move == "z":
-            wood = end_objs[-round(mai / 4)]
-            l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
+            obj_no = (z_min_no - round(p_len / 4)) % p_len
+            wood = end_objs[-p_len + obj_no]
+            l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
 
         elif z_min_no % 2 == 0 and inv_vh == 0 and yz_move == "y":
-            wood = end_objs[-(len(plane.data.vertices)) + round(mai / 2)]
+            obj_no = (z_min_no + round(p_len / 2)) % p_len
+            wood = end_objs[-p_len + obj_no]
             l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 0 and inv_vh == 0 and yz_move == "z":
-            wood = end_objs[-(len(plane.data.vertices)) + round(mai / 2)]
+            obj_no = (z_min_no + round(p_len / 2)) % p_len
+            wood = end_objs[-p_len + obj_no]
             l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 1 and inv_vh == 1 and yz_move == "y":
-            wood = end_objs[-(len(plane.data.vertices)) + round(mai / 2)]
+            obj_no = (z_min_no + round(p_len / 4)) % p_len
+            wood = end_objs[-p_len + obj_no]
             l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 1 and inv_vh == 1 and yz_move == "z":
-            wood = end_objs[-(len(plane.data.vertices)) + round(mai / 2)]
+            obj_no = (z_min_no + round(p_len / 4)) % p_len
+            wood = end_objs[-p_len + obj_no]
             l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 1 and inv_vh == 0 and yz_move == "y":
-            wood = end_objs[-round(mai / 4)]
+            obj_no = (z_min_no + round(p_len / 2)) % p_len
+            wood = end_objs[-p_len + obj_no]
             l = abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
         elif z_min_no % 2 == 1 and inv_vh == 0 and yz_move == "z":
-            wood = end_objs[-round(mai / 4)]
+            obj_no = (z_min_no + round(p_len / 2)) % p_len
+            wood = end_objs[-p_len + obj_no]
             l = -abs(wood.data.vertices[7].co.x - wood.data.vertices[3].co.x)
-            hikide_pos_x = (l / 19) * 1.5
 
-        hikide_pos_x = (l / 19) * 1.5
+    hikide_pos_x = (l / 19) * 1.4
 
     p_m = plane.modifiers.new(type="BOOLEAN", name="bool")
     currentPath = bpy.utils.script_paths()[2] + "/addons/"
@@ -370,21 +372,18 @@ def set_hikide(w, z_min_no, inv_vh, yz_move, end_objs, mai, plane, plane_t):
     p_m.operation = 'DIFFERENCE'
     hikide.location = wood.location
     hikide.rotation_euler = wood.rotation_euler
-    val = [hikide_pos_x, 0.069, plane_t / 2 + 0.001]
+    val = [hikide_pos_x, 0.069 + v_width, plane_t / 2 + 0.001]
     va = [d / s for d, s in zip(val, wood.scale)]
     mat = wood.matrix_world.copy()
     hikide.location = mat @ Vector(va)
-
-    co = bpy.context.collection
-
-    msh = bpy.data.meshes[hikide.data.name].copy()
+    msh = hikide.data.copy()
     hikide2 = bpy.data.objects.new(name='hikide', object_data=msh)
 
     hikide2.location = hikide.location
     hikide2.rotation_euler = hikide.rotation_euler
-    hikide2.rotation_euler[1] = hikide2.rotation_euler[1] + pi
+    hikide2.scale[2] = -1
     co.objects.link(hikide2)
-    val = [0, 0, plane_t + 0.001 * 2]
+    val = [0, 0, -(plane_t + 0.001 * 2)]
     va = [d / s for d, s in zip(val, hikide2.scale)]
 
     bpy.context.view_layer.update()
@@ -472,7 +471,7 @@ class hasigo:
 
         elif self.waku_type == '2' and self.cont == 0 and self.p_len % 2 == 1 and self.n % 2 == 0:
             #０個目で面の頂点が奇数の場合
-            print("type2_fist_kisuu")
+            #print("type2_fist_kisuu")
             self.rad = [-1, 1][self.is_conv] * (self.angle - pi / 2)
             self.length_adj = [0, 1][self.sw] * [-1, 1][self.is_conv] * (
                 -self.width / sin(self.angle))
@@ -493,14 +492,14 @@ class hasigo:
         elif 0 <= self.cont < self.p_len:
             if self.sw == 0 and self.is_conv == 0:
                 if self.waku_type == '2' and self.cont == 0:
-                    print("waku_type2")
+                    #print("waku_type2")
                     self.rad = [-1, 1][self.is_conv] * (self.angle - pi / 2)
                     self.length_adj = [1, -1][self.sw] * [
                         -1, 1
                     ][self.is_conv] * (-self.width / sin(self.angle))
 
                 else:
-                    print("futu-if")
+                    #print("futu-if")
                     self.rad = self.sw * [-1, 1][self.is_conv] * (self.angle -
                                                                   pi / 2)
                     self.length_adj = (self.another_width / sin(self.angle))
@@ -636,6 +635,8 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
 
     # メニューを実行したときに呼ばれる関数
     def execute(self, context):
+        start_time = time.time()
+        print("start_time = ", start_time)
 
         #初期設定####################################
         waku_type = "1"  #1:梯子状　2:風車風　#3平留め継ぎ(額縁風)
@@ -747,7 +748,9 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         elif soto_waku_color == "2":
             soto_ki_name = "ki_alumi"
         ############################################
-
+        print(
+            "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        )
         orig_plane = bpy.context.object
         if soto == True:
             soto_waku = orig_plane.copy()
@@ -757,7 +760,7 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         currentPath = bpy.utils.script_paths()[2] + "/addons/"
         filename = "hikide.blend"
         path = currentPath + filename + "/"
-        start_mats = [m.name for m in bpy.data.materials]
+        start_mats = [m for m in bpy.data.materials]
         if len(orig_plane.material_slots) == 0:
             if pri_set == "2":
                 bpy.ops.wm.append(directory=path + "Material/",
@@ -768,10 +771,10 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                                   link=False,
                                   filename="fusuma_pic")
             bpy.ops.object.material_slot_add()
-            end_mats = [m.name for m in bpy.data.materials]
+            end_mats = [m for m in bpy.data.materials]
             new_mat = list(set(end_mats) - set(start_mats))
 
-            fusuma_pic = bpy.data.materials[new_mat[0]]
+            fusuma_pic = new_mat[0]
             orig_plane.active_material = fusuma_pic
 
         orig_p_mat = orig_plane.matrix_world
@@ -780,10 +783,10 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         z = []
         for l in msh.loops:
             index_no0 = l.vertex_index
-            if l.vertex_index == len(msh.loops) - 1:
+            if l.index == len(msh.loops) - 1:
                 index_no1 = msh.loops[0].vertex_index
             else:
-                index_no1 = msh.loops[index_no0 + 1].vertex_index
+                index_no1 = msh.loops[l.index + 1].vertex_index
             z0 = orig_p_mat @ msh.vertices[index_no0].co
             z1 = orig_p_mat @ msh.vertices[index_no1].co
             z_center = (z0 + z1) / 2
@@ -792,7 +795,13 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         z_min_vertex_no = msh.loops[z_min_no].vertex_index
 
         #UVテクスチャの座標設定
-        uv_rot(z_min_no, orig_p_mat)
+        #テクスチャの上下方向を合わせている
+        p_len = len(msh.loops)
+        #反転したらUVを反時計回りに一個ずらす
+        if inv_vh == 1:
+            uv_rot(z_min_no, orig_plane)
+        else:
+            uv_rot((z_min_no + 1) % p_len, orig_plane)
 
         muki0 = orig_p_mat @ msh.vertices[z_min_vertex_no].co
         if z_min_no + 1 == len(msh.loops):
@@ -829,7 +838,6 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         if yz_move == "y":
             max_p = m @ (Vector((max(x_axis), min(y_axis), min(z_axis))) - loc)
             max_width = (zero_p - max_p).length
-            print("max_width =", max_width)
             w0 = (max_width + dp_width * (mai // 2)) / mai
             trans_val = (w0 / max_width, 1, 1)
 
@@ -857,21 +865,39 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         yy = vvv.y * trans_val[1]
         zz = vvv.z * trans_val[2]
         new_zero_p = m @ (Vector((xx, yy, zz)) - loc)
-        print("new_zero_p = ", new_zero_p)
-        print("zero_p = ", zero_p)
         dist = zero_p - new_zero_p
         orig_plane.location = orig_plane.location + dist
 
         w = 1
         wn = 0
         boko = [0, 0, 1, 1]
+        currentPath = bpy.utils.script_paths()[2] + "/addons/"
+        filename = "hikide.blend"
+        path = currentPath + filename + "/"
+        bpy.ops.wm.append(directory=path + "Object/",
+                          link=False,
+                          filename=ki_name)
+        append_obj = bpy.context.selected_objects[0]
+        if soto == True:
+            bpy.ops.wm.append(directory=path + "Object/",
+                              link=False,
+                              filename=soto_ki_name)
+            soto_append_obj = bpy.context.selected_objects[0]
+
         #print("_____________\start/____________")
         emps = []
         all_planes = [orig_plane]
         all_utigawa = []
         if hiki == 1:
             hiki2 = []
+        now = time.time()
+        for_tyokuzen = now
+        print("for tyokuzen = ", now - start_time)
+
         for w in range(1, mai + 1, 1):
+            now = time.time()
+            for_stat_time = now
+            print("for hajime")
             start_objs = [n for n in bpy.context.view_layer.objects]
             if w != 1:
                 if w % 4 == 2 or w % 4 == 0:
@@ -936,6 +962,7 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             euler[1] = 0
 
             if sep == True:
+                #テクスチャを分割する場合
                 if w == 1:
                     uv_x = []
                     uv_y = []
@@ -953,56 +980,60 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                         else:
                             uv_width = max(uv_x) - min(uv_x)
 
-                shift_uv_x = uv_x[-1:] + uv_x[:-1]
-                shift_uv_y = uv_y[-1:] + uv_y[:-1]
-                for vert, s_x, s_y in zip(bm.faces[0].loops, shift_uv_x,
-                                          shift_uv_y):
+                #shift_uv_x = uv_x[-1:] + uv_x[:-1]
+                #shift_uv_y = uv_y[-1:] + uv_y[:-1]
+                for vert, s_x, s_y in zip(bm.faces[0].loops, uv_x, uv_y):
                     #uvは一番最初（w=1）にuvの形を決めて後は縦か横に移動していく
                     #inv_vh == 1のとき反転しない
                     if w == 1:
                         uv_vert = vert[uv_layer].uv
                         if yz_move == "y":
                             if inv_vh == 1:
+                                #反転しない
+                                #ok
                                 uv_s = (uv_vert[0] - min(uv_x)) / mai
                                 uv_adj = min(uv_x)
                                 vert[uv_layer].uv[0] = uv_s + uv_adj
                             else:
+                                #反転する
                                 if z_min_no % 2 == 0:
-                                    #時計回しに横に回転
-                                    vert[uv_layer].uv[0] = s_y
-                                    vert[uv_layer].uv[1] = (
-                                        s_x - min(uv_x)) / mai + min(uv_x)
-                                else:
                                     vert[uv_layer].uv[0] = s_x
-                                    #vert[uv_layer].uv[1] = (s_y - min(uv_y)) / mai + min(uv_y) + (max(uv_y) - min(uv_y)) / mai
                                     vert[uv_layer].uv[1] = (
                                         s_y - min(uv_y)) / mai + min(uv_y) + (
-                                            max(uv_y) - min(uv_y)) / mai
+                                            mai - 1) * (max(uv_y) -
+                                                        min(uv_y)) / mai
+                                else:
+                                    vert[uv_layer].uv[0] = s_x
+                                    vert[uv_layer].uv[1] = (
+                                        s_y - min(uv_y)) / mai + min(uv_y) + (
+                                            mai - 1) * (max(uv_y) -
+                                                        min(uv_y)) / mai
 
                         elif yz_move == "z":
                             if inv_vh == 1:
+                                #反転しない
                                 uv_s = (uv_vert[1] - min(uv_y)) / mai
                                 uv_adj = min(uv_y) + (w - 1) * uv_width / mai
                                 vert[uv_layer].uv[1] = uv_s + uv_adj
                             else:
+                                #反転する
                                 if z_min_no % 2 == 0:
                                     vert[uv_layer].uv[0] = (
-                                        s_y - min(uv_y)) / mai + min(uv_y)
-                                    vert[uv_layer].uv[1] = max(uv_y) - s_x
+                                        s_x - min(uv_x)) / mai + min(uv_x)
+                                    vert[uv_layer].uv[1] = s_y
                                 else:
                                     vert[uv_layer].uv[0] = (
                                         s_x - min(uv_x)) / mai + min(uv_x)
                                     vert[uv_layer].uv[1] = s_y
 
                     else:
+                        #wが2個から先の場合
                         if yz_move == "y":
                             if inv_vh == 1:
-                                print("vert[uv_layer].uv=",
-                                      vert[uv_layer].uv[1])
                                 vert[uv_layer].uv[0] = vert[uv_layer].uv[0] + (
                                     w - 1) * (uv_width / mai)
                             else:
-                                vert[uv_layer].uv[1] = vert[uv_layer].uv[1] + (
+                                vert[uv_layer].uv[1] = vert[uv_layer].uv[1] - (
                                     w - 1) * (uv_width / mai)
 
                         elif yz_move == "z":
@@ -1020,8 +1051,14 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             bpy.ops.object.select_all(action='DESELECT')
             plane.select_set(True)
             bpy.context.view_layer.objects.active = plane
+            now = time.time()
+            waku_mae_time = now
+            print("waku mae = ", now - for_stat_time)
 
-            def waku(plane, waku_pos, v_width, h_width, t, ki_name):
+            def waku(plane, waku_pos, v_width, h_width, t, ki_name, append_obj,
+                     co):
+                def_waku_start = time.time()
+
                 #bmshをオブジェクトモードのまま使う
                 p_mat = plane.matrix_world
                 bm = bmesh.new()
@@ -1033,21 +1070,18 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                 p_len = len(loops)
                 #cont = 2 ; xv=loops[cont]
                 #if 1==1:
-
+                flag = 0
                 utigawa = []
-                for cont, xv in enumerate(loops):
-                    currentPath = bpy.utils.script_paths()[2] + "/addons/"
-                    filename = "hikide.blend"
-                    path = currentPath + filename + "/"
-                    bpy.ops.wm.append(directory=path + "Object/",
-                                      link=False,
-                                      filename=ki_name)
 
-                    bpy.context.view_layer.objects.active = bpy.context.selected_objects[
-                        0]
+                print("append_obj", append_obj)
+                for cont, xv in enumerate(loops):
+                    append_obj_copy = append_obj.copy()
+                    append_obj_copy.data = append_obj.data.copy()
+                    co.objects.link(append_obj_copy)
+                    bpy.context.view_layer.objects.active = append_obj_copy
                     obj = bpy.context.object
+                    print("obj=", obj)
                     #縦か横か？
-                    print("z_min_no=", z_min_no)
                     if (xv.index + inv_vh + (z_min_no % 2 - 1)) % 2 == 0:
                         width = h_width
                         another_width = v_width
@@ -1059,12 +1093,15 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                         obj.scale[0] * 1, obj.scale[1] * width,
                         obj.scale[2] * t[cont % 2]
                     ]
+                    print("obj=", obj)
 
                     for v in obj.data.vertices:
                         verts = []
                         for s, vv in zip(obj.scale, v.co):
                             verts.append(s * vv)
+                        #print(aaaaaaaaaaaaaaaaaaaaaaaaa)
                         v.co = verts
+
                     obj.scale = [1, 1, 1]
 
                     yv = xv.link_loop_next
@@ -1121,6 +1158,9 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                     #
                     #面[0]をどれだけ回転させてどれだけ移動するか
                     #index=(id)
+
+                    hasigo_mae = time.time()
+                    print("mae syori =", hasigo_mae - def_waku_start)
                     index = (0, 2)
                     n = xv.index + inv_vh + (z_min_no % 2 - 1)
                     length_adj = [0, 0]
@@ -1196,19 +1236,41 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                     rad[1], length_adj[1] = one.rad, one.length_adj
 
                     rad = [-rad[0], rad[1]]
+
+                    hasigo_ato = time.time()
+                    print("hajigo ato=", hasigo_ato - hasigo_mae)
+                    end_face_start_time = time.time()
+
                     for i, ids in enumerate(index):
                         #print("length_adj[i]",length_adj[i])
                         end_face(ids, width, length_adj[i], xv, obm, t, rad[i],
                                  n, waku_pos)
+                    end_face_end_time = time.time()
+                    print("end_face_end=",
+                          end_face_end_time - end_face_start_time)
 
-                    if cont == 0 and (z_min_no +
-                                      1) % 2 == 0 and p_len % 2 == 1:
+                    # if cont == 0 and (z_min_no +
+                    #                   1) % 2 == 0 and p_len % 2 == 1:
+                    #内側の寸法を調べる
+                    utigawa_s_time = time.time()
+                    if cont == 0 and p_len % 2 == 1 and z_min_no % 2 == 1 and inv_vh == 1:
+
+                        #反転しない
+                        mat = bpy.context.object.matrix_world.copy()
+                        v3 = obm.verts[3].co.copy()
+                        v3[2] = 0
+                        utigawa.append(mat @ obm.verts[3].co)
+                    elif cont == 0 and p_len % 2 == 1 and z_min_no % 2 == 0 and inv_vh == 0:
+
+                        #反転する
                         mat = bpy.context.object.matrix_world.copy()
                         v3 = obm.verts[3].co.copy()
                         v3[2] = 0
                         utigawa.append(mat @ obm.verts[3].co)
 
-                    if (cont + 1) % 2 == (z_min_no + 1) % 2:
+                    elif (cont +
+                          1) % 2 == 1 and z_min_no % 2 == 0 and inv_vh == 1:
+                        #反転しない
                         mat = bpy.context.object.matrix_world.copy()
 
                         v3 = obm.verts[3].co.copy()
@@ -1217,18 +1279,70 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                         v7[2] = 0
                         utigawa.append(mat @ v3)
                         utigawa.append(mat @ v7)
+
+                    elif (cont +
+                          1) % 2 == 0 and z_min_no % 2 == 0 and inv_vh == 0:
+                        #反転する
+                        mat = bpy.context.object.matrix_world.copy()
+
+                        v3 = obm.verts[3].co.copy()
+                        v3[2] = 0
+                        v7 = obm.verts[7].co.copy()
+                        v7[2] = 0
+                        utigawa.append(mat @ v3)
+                        utigawa.append(mat @ v7)
+                        if p_len % 2 == 0:
+                            flag = 1
+                    elif (cont +
+                          1) % 2 == 0 and z_min_no % 2 == 1 and inv_vh == 1:
+                        #反転しない
+                        mat = bpy.context.object.matrix_world.copy()
+
+                        v3 = obm.verts[3].co.copy()
+                        v3[2] = 0
+                        v7 = obm.verts[7].co.copy()
+                        v7[2] = 0
+                        utigawa.append(mat @ v3)
+                        utigawa.append(mat @ v7)
+                        if p_len % 2 == 0:
+                            flag = 1
+
+                    elif (cont +
+                          1) % 2 == 1 and z_min_no % 2 == 1 and inv_vh == 0:
+                        #反転する
+                        mat = bpy.context.object.matrix_world.copy()
+
+                        v3 = obm.verts[3].co.copy()
+                        v3[2] = 0
+                        v7 = obm.verts[7].co.copy()
+                        v7[2] = 0
+                        utigawa.append(mat @ v3)
+                        utigawa.append(mat @ v7)
+
                     bpy.ops.object.mode_set(mode='OBJECT')
-                return utigawa
+                    utigawa_e_time = time.time()
+                    print("utigawa_end_time=", utigawa_e_time - utigawa_s_time)
+                    def_waku_end = time.time()
+                    print("def_waku_time=", def_waku_end - def_waku_start)
+
+                return utigawa, flag
 
             #def waku---->end
-            utigawa = waku(plane, waku_pos, v_width, h_width, t, ki_name)
+            utigawa, flag = waku(plane, waku_pos, v_width, h_width, t, ki_name,
+                                 append_obj, co)
+            now = time.time()
+            waku_ato_time = now
+            print("waku ato = ", now - waku_mae_time)
+            if flag == 1:
+                utigawa = utigawa[-1:] + utigawa[:-1]
             end_objs = [n for n in bpy.context.view_layer.objects]
 
             #襖の引き手を付ける
 
             if hiki == 1:
                 hikide, hikide2 = set_hikide(w, z_min_no, inv_vh, yz_move,
-                                             end_objs, mai, plane, plane_t)
+                                             end_objs, mai, plane, plane_t,
+                                             v_width, co)
                 hiki2.append(hikide2)
 
             all_utigawa.append(utigawa)
@@ -1259,10 +1373,17 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             for o in chil_objs:
                 o.parent = emp
                 o.matrix_parent_inverse = emp.matrix_world.inverted()
+            now = time.time()
+            print("for_loope_end=", now - for_stat_time)
 
+        #最初のforがここでおわる
+        bpy.data.objects.remove(append_obj)
+        now = time.time()
+        print("for_end=", now - for_tyokuzen)
+        soto_waku_mae_time = now
+        print("soto waku mae = ", now - waku_ato_time)
         if soto == True:
             #外枠をつける
-            co = bpy.context.collection
             mat = soto_waku.matrix_world.copy()
             soto_waku = bpy.data.objects.new(name='aaa',
                                              object_data=soto_waku.data)
@@ -1272,9 +1393,11 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             bpy.ops.object.select_all(action='DESELECT')
             soto_waku.select_set(True)
             bpy.context.view_layer.objects.active = soto_waku
-            start_objs = [n for n in bpy.context.view_layer.objects]
+            #start_objs = [n for n in bpy.context.view_layer.objects]
+            start_objs = bpy.context.view_layer.objects
+            co = bpy.context.collection
             waku(soto_waku, "3", soto_v_width, soto_h_width, soto_t,
-                 soto_ki_name)
+                 soto_ki_name, soto_append_obj, co)
             bpy.data.objects.remove(soto_waku)
             end_objs = [n for n in bpy.context.view_layer.objects]
             chil_objs = list(set(end_objs) - set(start_objs))
@@ -1285,6 +1408,8 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                     va = [d / s for d, s in zip(val, o.scale)]
                     mat = o.matrix_world.copy()
                     o.location = mat @ Vector(va)
+
+            bpy.data.objects.remove(soto_append_obj)
         #全部の親になるエンプティ
         if mai > 1 or soto == True:
 
@@ -1319,20 +1444,10 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         #平面の頂点を枠に合わせて移動する
 
         for n, (a_plane, a_utigawa) in enumerate(zip(all_planes, all_utigawa)):
-
-            p_len = len(a_plane.data.loops)
-            if (z_min_no + inv_vh) % 2 == 0 and p_len % 2 == 1:
-                start = 1
-            elif 1 == (z_min_no + inv_vh) % 2:
-                start = 0
-            else:
-                start = 0
-
-            for i, l in enumerate(a_plane.data.loops, start):
+            for l, a_u in zip(a_plane.data.loops, a_utigawa):
 
                 a_plane.data.vertices[
-                    l.vertex_index].co = a_plane.matrix_world.inverted(
-                    ) @ a_utigawa[i - 1]
+                    l.vertex_index].co = a_plane.matrix_world.inverted() @ a_u
             new_obj = a_plane.copy()
             new_obj.data = a_plane.data.copy()
             co.objects.link(new_obj)
@@ -1340,10 +1455,13 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             new_obj.location = norm_move(new_obj, -plane_t / 2)
             if hiki == 1:
                 #裏面の引き手のモディファイアをつける
-                print("n=", n)
-                print(hiki2)
                 set_hikide2(new_obj, hiki2[n])
+        now = time.time()
+        soto_waku_mae_time = now - soto_waku_mae_time
+        print("soto waku ato = ", soto_waku_mae_time)
 
+        all_time = now - start_time
+        print("all time = ", all_time)
         return {'FINISHED'}
 
 

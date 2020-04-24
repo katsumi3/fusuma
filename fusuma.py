@@ -1,4 +1,4 @@
-import bpy, bmesh, bpy.ops, time
+import bpy, bmesh, bpy.ops
 from math import pi, radians, degrees, sqrt, cos, acos, tan, sin, atan
 from mathutils import Vector, Matrix, Euler
 from bpy.props import FloatProperty, EnumProperty, BoolProperty, IntProperty
@@ -210,7 +210,6 @@ def norm_move(obj, z_c):
 
 def uv_rot(loop_no, plane):
     #UVテクスチャをz_min_noを下にして並べる
-    #print("loop_no=", loop_no)
     msh = plane.data
     p_mat = plane.matrix_world.copy()
     norm = msh.polygons[0].normal
@@ -635,8 +634,6 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
 
     # メニューを実行したときに呼ばれる関数
     def execute(self, context):
-        start_time = time.time()
-        print("start_time = ", start_time)
 
         #初期設定####################################
         waku_type = "1"  #1:梯子状　2:風車風　#3平留め継ぎ(額縁風)
@@ -659,6 +656,7 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
 
         sep = self.sep
         soto = self.soto
+        #wakuo_pos枠を内側につけるかどうか
         waku_pos = "1"
 
         if pri_set == "0":
@@ -671,14 +669,14 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             self.v_width = 0.018
             self.h_width = 0.025
             u_fukasa = 0.002
-            self.plane_t = self.v_width - u_fukasa * 2
             self.t0 = 0.017
             sa = 0.001
             self.t1 = self.t0 - sa * 2
+            self.plane_t = self.t0 - u_fukasa * 2
             self.soto_v_width = 0.018
             self.soto_h_width = 0.025
             soto_sa = 0.001
-            self.soto_t0 = 0.099
+            self.soto_t0 = self.t0 * 4
             self.soto_t1 = self.soto_t0 - soto_sa * 2
             self.hiki = True
             self.waku_color = "1"
@@ -688,15 +686,16 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             self.v_width = 0.050
             self.h_width = 0.040
             u_fukasa = 0.002
-            self.plane_t = self.v_width - u_fukasa * 2
+            self.plane_t = 0.003
             self.t0 = 0.021
             sa = 0.001
-            self.t1 = self.t0 - sa * 2
+            self.t1 = 0.02
             self.soto_v_width = 0.050
             self.soto_h_width = 0.040
-            self.soto_t0 = 0.021
+
             soto_sa = 0.001
-            self.soto_t1 = self.t0 - soto_sa * 2
+            self.soto_t1 = 0.042
+            self.soto_t0 = 0.044
             self.hiki = False
             self.waku_color = "2"
             self.soto_waku_color = "2"
@@ -713,28 +712,10 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         soto_waku_color = self.soto_waku_color
         if self.inv == False:
             inv_vh = 1
-            t[0] = self.t0
-            t[1] = self.t1
-            soto_t[0] = self.soto_t0
-            soto_t[1] = self.soto_t1
-            dp_width = self.v_width
-            dp0_width = self.h_width
-            soto_dp_width = self.soto_v_width
-            soto_dp0_width = self.soto_h_width
+
         else:
             inv_vh = 0
-            t[0] = self.t1
-            t[1] = self.t0
-            dp_width = self.h_width
-            dp0_width = self.v_width
-            soto_t[0] = self.soto_t1
-            soto_t[1] = self.soto_t0
-            soto_dp_width = self.soto_h_width
-            soto_dp0_width = self.soto_v_width
 
-        if self.yz_move == "z":
-            dp_width, dp0_width = dp0_width, dp_width
-            soto_dp_width, soto_dp0_width = soto_dp0_width, soto_dp_width
         if waku_color == "0":
             ki_name = "ki"
         elif waku_color == "1":
@@ -751,8 +732,10 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         print(
             "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
         )
+
         orig_plane = bpy.context.object
         if soto == True:
+
             soto_waku = orig_plane.copy()
             soto_waku.data = orig_plane.data.copy()
         co = bpy.context.collection
@@ -793,9 +776,52 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             z.append(z_center[2])
         z_min_no = z.index(min(z))
         z_min_vertex_no = msh.loops[z_min_no].vertex_index
+        print("z_min_no=", z_min_no)
 
-        #UVテクスチャの座標設定
-        #テクスチャの上下方向を合わせている
+        if inv_vh == 1:
+            if z_min_no % 2 == 0:
+                t[0] = self.t1
+                t[1] = self.t0
+                soto_t[0] = self.soto_t1
+                soto_t[1] = self.soto_t0
+                dp_width = self.v_width
+                #dp0_width = self.h_width
+                #soto_dp_width = self.soto_v_width
+                #soto_dp0_width = self.soto_h_width
+            else:
+                t[0] = self.t0
+                t[1] = self.t1
+                soto_t[0] = self.soto_t0
+                soto_t[1] = self.soto_t1
+                dp_width = self.h_width
+                #dp0_width = self.v_width
+                #soto_dp_width = self.soto_h_width
+                #soto_dp0_width = self.soto_v_width
+        else:
+            if z_min_no % 2 == 0:
+                t[0] = self.t0
+                t[1] = self.t1
+                soto_t[0] = self.soto_t0
+                soto_t[1] = self.soto_t1
+                dp_width = self.h_width
+                #dp0_width = self.v_width
+                #soto_dp_width = self.soto_h_width
+                #soto_dp0_width = self.soto_v_width
+            else:
+                t[0] = self.t1
+                t[1] = self.t0
+                soto_t[0] = self.soto_t1
+                soto_t[1] = self.soto_t0
+                dp_width = self.v_width
+                #dp0_width = self.h_width
+                #soto_dp_width = self.soto_v_width
+                #soto_dp0_width = self.soto_h_width
+
+#        if self.yz_move == "z":
+#            dp_width, dp0_width = dp0_width, dp_width
+#            soto_dp_width, soto_dp0_width = soto_dp0_width, soto_dp_width
+#UVテクスチャの座標設定
+#テクスチャの上下方向を合わせている
         p_len = len(msh.loops)
         #反転したらUVを反時計回りに一個ずらす
         if inv_vh == 1:
@@ -890,14 +916,9 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
         all_utigawa = []
         if hiki == 1:
             hiki2 = []
-        now = time.time()
-        for_tyokuzen = now
-        print("for tyokuzen = ", now - start_time)
 
         for w in range(1, mai + 1, 1):
-            now = time.time()
-            for_stat_time = now
-            print("for hajime")
+
             start_objs = [n for n in bpy.context.view_layer.objects]
             if w != 1:
                 if w % 4 == 2 or w % 4 == 0:
@@ -1051,13 +1072,9 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             bpy.ops.object.select_all(action='DESELECT')
             plane.select_set(True)
             bpy.context.view_layer.objects.active = plane
-            now = time.time()
-            waku_mae_time = now
-            print("waku mae = ", now - for_stat_time)
 
             def waku(plane, waku_pos, v_width, h_width, t, ki_name, append_obj,
                      co):
-                def_waku_start = time.time()
 
                 #bmshをオブジェクトモードのまま使う
                 p_mat = plane.matrix_world
@@ -1159,8 +1176,6 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                     #面[0]をどれだけ回転させてどれだけ移動するか
                     #index=(id)
 
-                    hasigo_mae = time.time()
-                    print("mae syori =", hasigo_mae - def_waku_start)
                     index = (0, 2)
                     n = xv.index + inv_vh + (z_min_no % 2 - 1)
                     length_adj = [0, 0]
@@ -1234,25 +1249,16 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
 
                     rad[0], length_adj[0] = zero.rad, zero.length_adj
                     rad[1], length_adj[1] = one.rad, one.length_adj
-
                     rad = [-rad[0], rad[1]]
 
-                    hasigo_ato = time.time()
-                    print("hajigo ato=", hasigo_ato - hasigo_mae)
-                    end_face_start_time = time.time()
-
                     for i, ids in enumerate(index):
-                        #print("length_adj[i]",length_adj[i])
                         end_face(ids, width, length_adj[i], xv, obm, t, rad[i],
                                  n, waku_pos)
-                    end_face_end_time = time.time()
-                    print("end_face_end=",
-                          end_face_end_time - end_face_start_time)
 
                     # if cont == 0 and (z_min_no +
                     #                   1) % 2 == 0 and p_len % 2 == 1:
                     #内側の寸法を調べる
-                    utigawa_s_time = time.time()
+
                     if cont == 0 and p_len % 2 == 1 and z_min_no % 2 == 1 and inv_vh == 1:
 
                         #反転しない
@@ -1320,19 +1326,13 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                         utigawa.append(mat @ v7)
 
                     bpy.ops.object.mode_set(mode='OBJECT')
-                    utigawa_e_time = time.time()
-                    print("utigawa_end_time=", utigawa_e_time - utigawa_s_time)
-                    def_waku_end = time.time()
-                    print("def_waku_time=", def_waku_end - def_waku_start)
 
                 return utigawa, flag
 
             #def waku---->end
             utigawa, flag = waku(plane, waku_pos, v_width, h_width, t, ki_name,
                                  append_obj, co)
-            now = time.time()
-            waku_ato_time = now
-            print("waku ato = ", now - waku_mae_time)
+
             if flag == 1:
                 utigawa = utigawa[-1:] + utigawa[:-1]
             end_objs = [n for n in bpy.context.view_layer.objects]
@@ -1373,22 +1373,19 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             for o in chil_objs:
                 o.parent = emp
                 o.matrix_parent_inverse = emp.matrix_world.inverted()
-            now = time.time()
-            print("for_loope_end=", now - for_stat_time)
 
         #最初のforがここでおわる
         bpy.data.objects.remove(append_obj)
-        now = time.time()
-        print("for_end=", now - for_tyokuzen)
-        soto_waku_mae_time = now
-        print("soto waku mae = ", now - waku_ato_time)
+
         if soto == True:
             #外枠をつける
             mat = soto_waku.matrix_world.copy()
             soto_waku = bpy.data.objects.new(name='aaa',
                                              object_data=soto_waku.data)
             co.objects.link(soto_waku)
+
             soto_waku.matrix_world = mat
+            soto_waku.location = norm_move(soto_waku, max(t) / 2)
 
             bpy.ops.object.select_all(action='DESELECT')
             soto_waku.select_set(True)
@@ -1396,8 +1393,10 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             #start_objs = [n for n in bpy.context.view_layer.objects]
             start_objs = bpy.context.view_layer.objects
             co = bpy.context.collection
+
             waku(soto_waku, "3", soto_v_width, soto_h_width, soto_t,
                  soto_ki_name, soto_append_obj, co)
+            #
             bpy.data.objects.remove(soto_waku)
             end_objs = [n for n in bpy.context.view_layer.objects]
             chil_objs = list(set(end_objs) - set(start_objs))
@@ -1410,6 +1409,7 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
                     o.location = mat @ Vector(va)
 
             bpy.data.objects.remove(soto_append_obj)
+
         #全部の親になるエンプティ
         if mai > 1 or soto == True:
 
@@ -1456,12 +1456,7 @@ class FUSUMA_OT_CreateObject(bpy.types.Operator):
             if hiki == 1:
                 #裏面の引き手のモディファイアをつける
                 set_hikide2(new_obj, hiki2[n])
-        now = time.time()
-        soto_waku_mae_time = now - soto_waku_mae_time
-        print("soto waku ato = ", soto_waku_mae_time)
 
-        all_time = now - start_time
-        print("all time = ", all_time)
         return {'FINISHED'}
 
 
